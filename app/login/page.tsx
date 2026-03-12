@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/LoginForm";
 import { getOptionalSession } from "@/lib/auth";
+import { getMissingPublicSupabaseEnv, hasPublicSupabaseEnv } from "@/lib/supabase/env";
 import { login } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,36 @@ export default async function LoginPage({
 }: {
   searchParams?: { error?: string };
 }) {
+  if (!hasPublicSupabaseEnv()) {
+    const missing = getMissingPublicSupabaseEnv();
+
+    return (
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8 md:px-6 md:py-12">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_18%,rgba(248,113,113,0.16),transparent_22%),radial-gradient(circle_at_82%_16%,rgba(56,189,248,0.18),transparent_24%),radial-gradient(circle_at_50%_86%,rgba(243,201,105,0.13),transparent_28%)]" />
+        <section className="w-full max-w-2xl rounded-[34px] border border-white/10 bg-[linear-gradient(160deg,rgba(17,32,49,0.92),rgba(10,19,31,0.92))] p-8 shadow-glow backdrop-blur md:p-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-2 text-xs uppercase tracking-[0.32em] text-accent">
+            <SparkIcon />
+            Setup Required
+          </div>
+          <h1 className="mt-6 font-display text-4xl font-semibold text-white">
+            Supabase environment variables are missing
+          </h1>
+          <p className="mt-4 text-sm leading-7 text-slate-300">
+            Add these values in Vercel Project Settings under Environment Variables, then redeploy.
+          </p>
+          <div className="mt-6 rounded-[24px] border border-white/8 bg-white/[0.04] p-5">
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Required</p>
+            <div className="mt-3 space-y-2 font-mono text-sm text-slate-200">
+              {missing.map((item) => (
+                <p key={item}>{item}</p>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   const { supabase, user } = await getOptionalSession();
   let isAdmin = false;
   let profileRole: string | null = null;
