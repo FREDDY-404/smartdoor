@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -39,6 +40,10 @@ type CardRow = {
   is_enabled?: boolean | null;
 };
 
+function getFromEmail() {
+  return Deno.env.get("RESEND_FROM_EMAIL")?.trim() || DEFAULT_FROM_EMAIL;
+}
+
 function json(data: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(data), {
     ...init,
@@ -68,6 +73,11 @@ function normalizeUid(uid: string | null | undefined) {
 
 function normalizeMessage(message: string | null | undefined) {
   const value = String(message ?? "").trim();
+  return value || null;
+}
+
+function normalizeEmail(email: string | null | undefined) {
+  const value = String(email ?? "").trim().toLowerCase();
   return value || null;
 }
 
@@ -201,6 +211,7 @@ function buildEmailHtml(input: {
 
 async function sendEmail(args: {
   resendApiKey: string;
+  from: string;
   to: string;
   subject: string;
   html: string;
@@ -213,7 +224,7 @@ async function sendEmail(args: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      from: DEFAULT_FROM_EMAIL,
+      from: args.from,
       to: [args.to],
       subject: args.subject,
       html: args.html,
@@ -241,6 +252,7 @@ Deno.serve(async (request) => {
     const supabaseServiceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
     const resendApiKey = requireEnv("RESEND_API_KEY");
     const adminAlertEmail = requireEnv("ADMIN_ALERT_EMAIL");
+    const fromEmail = getFromEmail();
 
     const deviceCode = request.headers.get("x-device-code")?.trim();
     const deviceToken = request.headers.get("x-device-token")?.trim();
@@ -364,8 +376,16 @@ Deno.serve(async (request) => {
 
       const activeCard = isCardActive(card) ? card : null;
       const isAuthorized = eventType === "RFID_OK" && Boolean(activeCard);
-      const recipient =
-        isAuthorized && activeCard?.email ? activeCard.email : adminAlertEmail;
+      const recipient = normalizeEmail(
+        isAuthorized && activeCard?.email ? activeCard.email : adminAlertEmail
+      );
+
+      if (!recipient) {
+        return json(
+          { ok: false, error: "Notification recipient is not configured." },
+          { status: 500 }
+        );
+      }
 
       const subject = isAuthorized
         ? "Smart Door Access Granted"
@@ -379,6 +399,7 @@ Deno.serve(async (request) => {
       try {
         await sendEmail({
           resendApiKey,
+          from: fromEmail,
           to: recipient,
           subject,
           html: buildEmailHtml({
