@@ -3,6 +3,8 @@ import LoginForm from "@/components/LoginForm";
 import { getOptionalSession } from "@/lib/auth";
 import { login } from "./actions";
 
+export const dynamic = "force-dynamic";
+
 function SignalIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
