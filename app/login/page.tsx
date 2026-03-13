@@ -155,7 +155,7 @@ export default async function LoginPage({
           </div>
           <h2 className="mt-5 font-display text-4xl font-semibold text-white">Sign in</h2>
           <p className="mt-3 text-sm leading-7 text-slate-400">
-            Use an admin email to receive a one-time login code. The account must still have{" "}
+            Use an account with{" "}
             <code className="rounded-md bg-white/[0.05] px-2 py-1 text-slate-200">
               profiles.role = &apos;admin&apos;
             </code>

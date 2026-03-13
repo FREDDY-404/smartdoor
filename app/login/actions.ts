@@ -6,67 +6,27 @@ import { createServerSupabase } from "@/lib/supabase/ssr";
 
 export type LoginState = {
   error?: string;
-  message?: string;
-  email?: string;
-  otpSent?: boolean;
 };
 
 export async function login(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
-  const intent = String(formData.get("intent") ?? "send-otp").trim();
   const email = String(formData.get("email") ?? "").trim();
-  const otp = String(formData.get("otp") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
 
-  if (!email) {
-    return { error: "Email is required." };
+  if (!email || !password) {
+    return { error: "Email and password are required." };
   }
 
   const supabase = createServerSupabase();
-
-  if (intent === "send-otp") {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: false
-      }
-    });
-
-    if (error) {
-      return {
-        error: error.message ?? "Failed to send the verification code.",
-        email
-      };
-    }
-
-    return {
-      email,
-      otpSent: true,
-      message: "Check your email for the login code, then enter it below."
-    };
-  }
-
-  if (!otp) {
-    return {
-      error: "Enter the verification code from your email.",
-      email,
-      otpSent: true
-    };
-  }
-
-  const { data, error } = await supabase.auth.verifyOtp({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
-    token: otp,
-    type: "email"
+    password
   });
 
   if (error || !data.user) {
-    return {
-      error: error?.message ?? "The verification code is invalid or expired.",
-      email,
-      otpSent: true
-    };
+    return { error: error?.message ?? "Sign in failed." };
   }
 
   const service = createServiceClient();
