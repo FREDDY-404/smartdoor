@@ -37,6 +37,12 @@ export default async function CardsPage() {
             placeholder="Owner name"
             className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
           />
+          <input
+            name="email"
+            type="email"
+            placeholder="Owner email"
+            className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
+          />
           <select
             name="device_id"
             className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
@@ -92,6 +98,9 @@ export default async function CardsPage() {
                       UID: {card.uid} · {card.device?.name || "All devices"}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
+                      Email: {card.email || "No email"}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
                       Updated {formatDateTime(card.updated_at)}
                     </p>
                   </div>
@@ -124,6 +133,13 @@ export default async function CardsPage() {
                     name="owner_name"
                     defaultValue={card.owner_name ?? ""}
                     placeholder="Owner name"
+                    className="rounded-2xl border border-border bg-panel px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
+                  />
+                  <input
+                    name="email"
+                    type="email"
+                    defaultValue={card.email ?? ""}
+                    placeholder="Owner email"
                     className="rounded-2xl border border-border bg-panel px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
                   />
                   <select

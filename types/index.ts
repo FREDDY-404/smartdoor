@@ -56,6 +56,7 @@ export type AuthorizedCard = {
   uid: string;
   label: string;
   owner_name: string | null;
+  email: string | null;
   is_enabled: boolean;
   notes: string | null;
   created_at: string;

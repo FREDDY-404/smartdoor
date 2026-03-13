@@ -23,6 +23,62 @@ function generateDeviceToken() {
   return `${crypto.randomUUID()}${crypto.randomUUID().slice(0, 8)}`;
 }
 
+async function createDeviceWithCompatibleTokenColumn(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"],
+  payload: {
+    name: string;
+    device_code: string;
+    location: string | null;
+    is_active: boolean;
+  }
+) {
+  const token = generateDeviceToken();
+  const secretPayload = { ...payload, secret_token: token };
+  const devicePayload = { ...payload, device_token: token };
+
+  const secretAttempt = await supabase.from("devices").insert(secretPayload);
+  if (!secretAttempt.error) {
+    return;
+  }
+
+  if (!secretAttempt.error.message.toLowerCase().includes("secret_token")) {
+    throw new Error(secretAttempt.error.message);
+  }
+
+  const deviceAttempt = await supabase.from("devices").insert(devicePayload);
+  if (deviceAttempt.error) {
+    throw new Error(deviceAttempt.error.message);
+  }
+}
+
+async function rotateDeviceTokenWithCompatibleColumn(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>["supabase"],
+  id: string
+) {
+  const token = generateDeviceToken();
+  const secretAttempt = await supabase
+    .from("devices")
+    .update({ secret_token: token })
+    .eq("id", id);
+
+  if (!secretAttempt.error) {
+    return;
+  }
+
+  if (!secretAttempt.error.message.toLowerCase().includes("secret_token")) {
+    throw new Error(secretAttempt.error.message);
+  }
+
+  const deviceAttempt = await supabase
+    .from("devices")
+    .update({ device_token: token })
+    .eq("id", id);
+
+  if (deviceAttempt.error) {
+    throw new Error(deviceAttempt.error.message);
+  }
+}
+
 function revalidatePaths(paths: string[]) {
   for (const path of paths) {
     revalidatePath(path);
@@ -37,6 +93,7 @@ export async function saveCardAction(formData: FormData) {
     uid: normalizeUid(formData.get("uid")),
     label: String(formData.get("label") ?? "").trim(),
     owner_name: normalizeNullableText(formData.get("owner_name")),
+    email: normalizeNullableText(formData.get("email")),
     notes: normalizeNullableText(formData.get("notes")),
     is_enabled: normalizeBoolean(formData.get("is_enabled"))
   };
@@ -95,13 +152,7 @@ export async function saveDeviceAction(formData: FormData) {
       throw new Error(error.message);
     }
   } else {
-    const { error } = await supabase.from("devices").insert({
-      ...payload,
-      secret_token: generateDeviceToken()
-    });
-    if (error) {
-      throw new Error(error.message);
-    }
+    await createDeviceWithCompatibleTokenColumn(supabase, payload);
   }
 
   revalidatePaths([
@@ -120,14 +171,7 @@ export async function rotateDeviceTokenAction(formData: FormData) {
     throw new Error("Device id is required.");
   }
 
-  const { error } = await supabase
-    .from("devices")
-    .update({ secret_token: generateDeviceToken() })
-    .eq("id", id);
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  await rotateDeviceTokenWithCompatibleColumn(supabase, id);
 
   revalidatePaths(["/dashboard/devices"]);
 }

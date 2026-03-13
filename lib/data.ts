@@ -258,6 +258,7 @@ export async function getCards(supabase: SupabaseLike) {
     uid: record.uid ?? "",
     label: record.label ?? "Unnamed card",
     owner_name: record.owner_name ?? null,
+    email: record.email ?? null,
     is_enabled: record.is_enabled ?? true,
     notes: record.notes ?? null,
     created_at: record.created_at ?? new Date(0).toISOString(),

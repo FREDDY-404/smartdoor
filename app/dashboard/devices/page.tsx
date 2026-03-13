@@ -15,10 +15,12 @@ export default async function DevicesPage() {
 
   const { data: tokens } = await supabase
     .from("devices")
-    .select("id, secret_token")
+    .select("*")
     .order("name", { ascending: true });
 
-  const tokenMap = new Map((tokens ?? []).map((device: any) => [device.id, device.secret_token]));
+  const tokenMap = new Map(
+    (tokens ?? []).map((device: any) => [device.id, device.secret_token ?? device.device_token ?? ""])
+  );
 
   return (
     <div className="space-y-6">

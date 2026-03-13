@@ -15,6 +15,7 @@ type IngestPayload = {
   event?: string;
   event_type?: string;
   uid?: string | null;
+  otp?: string | null;
   message?: string | null;
   state_code?: number | null;
   uptime_ms?: number | null;
@@ -73,6 +74,13 @@ function normalizeUid(uid: string | null | undefined) {
 
 function normalizeMessage(message: string | null | undefined) {
   const value = String(message ?? "").trim();
+  return value || null;
+}
+
+function normalizeOtp(otp: string | null | undefined) {
+  const value = String(otp ?? "")
+    .trim()
+    .replace(/\s+/g, "");
   return value || null;
 }
 
@@ -238,6 +246,54 @@ async function sendEmail(args: {
   }
 }
 
+function buildOtpEmailText(input: {
+  deviceName: string;
+  location: string;
+  uid: string | null;
+  otp: string;
+  timestamp: string;
+  ownerName: string | null;
+}) {
+  return [
+    "Smart Door OTP Code",
+    "",
+    `OTP Code: ${input.otp}`,
+    `Device: ${input.deviceName}`,
+    `Location: ${input.location}`,
+    `RFID UID: ${input.uid ?? "Unknown"}`,
+    `Time: ${input.timestamp}`,
+    input.ownerName ? `Card Owner: ${input.ownerName}` : ""
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildOtpEmailHtml(input: {
+  deviceName: string;
+  location: string;
+  uid: string | null;
+  otp: string;
+  timestamp: string;
+  ownerName: string | null;
+}) {
+  const ownerBlock = input.ownerName
+    ? `<p><strong>Card Owner:</strong> ${escapeHtml(input.ownerName)}</p>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <body style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+    <h2>Smart Door OTP Code</h2>
+    <p><strong>Your OTP Code:</strong> ${escapeHtml(input.otp)}</p>
+    <p><strong>Device:</strong> ${escapeHtml(input.deviceName)}</p>
+    <p><strong>Location:</strong> ${escapeHtml(input.location)}</p>
+    <p><strong>RFID UID:</strong> ${escapeHtml(input.uid ?? "Unknown")}</p>
+    <p><strong>Time:</strong> ${escapeHtml(input.timestamp)}</p>
+    ${ownerBlock}
+  </body>
+</html>`;
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -280,6 +336,7 @@ Deno.serve(async (request) => {
         ? payload.state_code
         : null;
     const uid = normalizeUid(payload.uid);
+    const otp = normalizeOtp(payload.otp);
     const message = normalizeMessage(payload.message);
     const createdAt = normalizeTimestamp(payload.created_at);
 
@@ -357,7 +414,7 @@ Deno.serve(async (request) => {
     let notificationRecipient: string | null = null;
     let notificationError: string | null = null;
 
-    if (RFID_NOTIFICATION_EVENTS.has(eventType)) {
+    if (RFID_NOTIFICATION_EVENTS.has(eventType) || eventType === "OTP_SENT") {
       let card: CardRow | null = null;
 
       if (uid) {
@@ -376,57 +433,88 @@ Deno.serve(async (request) => {
 
       const activeCard = isCardActive(card) ? card : null;
       const isAuthorized = eventType === "RFID_OK" && Boolean(activeCard);
-      const recipient = normalizeEmail(
-        isAuthorized && activeCard?.email ? activeCard.email : adminAlertEmail
-      );
-
-      if (!recipient) {
-        return json(
-          { ok: false, error: "Notification recipient is not configured." },
-          { status: 500 }
-        );
-      }
-
-      const subject = isAuthorized
-        ? "Smart Door Access Granted"
-        : "Smart Door Unauthorized RFID Scan";
-      const accessStatus = isAuthorized ? "Authorized" : "Unauthorized";
+      const recipient =
+        eventType === "OTP_SENT"
+          ? normalizeEmail(activeCard?.email)
+          : normalizeEmail(isAuthorized && activeCard?.email ? activeCard.email : adminAlertEmail);
       const deviceName = device.name?.trim() || device.device_code || "Smart Door";
       const location = device.location?.trim() || "Unknown location";
 
-      notificationRecipient = recipient;
+      if (!recipient) {
+        notificationError =
+          eventType === "OTP_SENT"
+            ? "Card email is not configured."
+            : "Notification recipient is not configured.";
+      } else {
+        notificationRecipient = recipient;
 
-      try {
-        await sendEmail({
-          resendApiKey,
-          from: fromEmail,
-          to: recipient,
-          subject,
-          html: buildEmailHtml({
-            deviceName,
-            location,
-            uid,
-            accessStatus,
-            timestamp: createdAt,
-            eventType,
-            ownerName: activeCard?.owner_name ?? null,
-            message
-          }),
-          text: buildEmailText({
-            deviceName,
-            location,
-            uid,
-            accessStatus,
-            timestamp: createdAt,
-            eventType,
-            ownerName: activeCard?.owner_name ?? null,
-            message
-          })
-        });
-        notificationSent = true;
-      } catch (error) {
-        notificationError = error instanceof Error ? error.message : "Email delivery failed.";
-        console.error("Email send failed", notificationError);
+        try {
+          if (eventType === "OTP_SENT") {
+            if (!otp) {
+              notificationError = "OTP value is missing from the event payload.";
+            } else {
+              await sendEmail({
+                resendApiKey,
+                from: fromEmail,
+                to: recipient,
+                subject: "Smart Door OTP Code",
+                html: buildOtpEmailHtml({
+                  deviceName,
+                  location,
+                  uid,
+                  otp,
+                  timestamp: createdAt,
+                  ownerName: activeCard?.owner_name ?? null
+                }),
+                text: buildOtpEmailText({
+                  deviceName,
+                  location,
+                  uid,
+                  otp,
+                  timestamp: createdAt,
+                  ownerName: activeCard?.owner_name ?? null
+                })
+              });
+              notificationSent = true;
+            }
+          } else {
+            const subject = isAuthorized
+              ? "Smart Door Access Granted"
+              : "Smart Door Unauthorized RFID Scan";
+            const accessStatus = isAuthorized ? "Authorized" : "Unauthorized";
+
+            await sendEmail({
+              resendApiKey,
+              from: fromEmail,
+              to: recipient,
+              subject,
+              html: buildEmailHtml({
+                deviceName,
+                location,
+                uid,
+                accessStatus,
+                timestamp: createdAt,
+                eventType,
+                ownerName: activeCard?.owner_name ?? null,
+                message
+              }),
+              text: buildEmailText({
+                deviceName,
+                location,
+                uid,
+                accessStatus,
+                timestamp: createdAt,
+                eventType,
+                ownerName: activeCard?.owner_name ?? null,
+                message
+              })
+            });
+            notificationSent = true;
+          }
+        } catch (error) {
+          notificationError = error instanceof Error ? error.message : "Email delivery failed.";
+          console.error("Email send failed", notificationError);
+        }
       }
     }
 

@@ -69,6 +69,7 @@ create table public.authorized_cards (
   uid text not null unique,
   label text not null,
   owner_name text,
+  email text,
   is_enabled boolean not null default true,
   notes text,
   created_at timestamptz not null default now(),
