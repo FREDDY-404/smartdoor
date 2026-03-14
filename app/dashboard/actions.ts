@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 
+export type DashboardFormState = {
+  status?: "success" | "error";
+  message?: string;
+};
+
 function normalizeNullableText(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
   return text ? text : null;
@@ -117,6 +122,21 @@ export async function saveCardAction(formData: FormData) {
   revalidatePaths(["/dashboard/cards"]);
 }
 
+export async function saveCardFormAction(
+  _prevState: DashboardFormState,
+  formData: FormData
+): Promise<DashboardFormState> {
+  try {
+    await saveCardAction(formData);
+    return { status: "success", message: "Card saved successfully." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Failed to save card."
+    };
+  }
+}
+
 export async function deleteCardAction(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = String(formData.get("id") ?? "").trim();
@@ -162,6 +182,21 @@ export async function saveDeviceAction(formData: FormData) {
     "/dashboard/events",
     "/dashboard/security"
   ]);
+}
+
+export async function saveDeviceFormAction(
+  _prevState: DashboardFormState,
+  formData: FormData
+): Promise<DashboardFormState> {
+  try {
+    await saveDeviceAction(formData);
+    return { status: "success", message: "Device saved successfully." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Failed to save device."
+    };
+  }
 }
 
 export async function rotateDeviceTokenAction(formData: FormData) {

@@ -1,6 +1,7 @@
 import SectionCard from "@/components/dashboard/SectionCard";
 import EmptyState from "@/components/dashboard/EmptyState";
 import RealtimeRefresh from "@/components/dashboard/RealtimeRefresh";
+import AddDeviceForm from "@/components/dashboard/AddDeviceForm";
 import { requireAdmin } from "@/lib/auth";
 import { getDevices, getDeviceStatuses } from "@/lib/data";
 import { formatDateTime, maskToken } from "@/lib/format";
@@ -29,37 +30,7 @@ export default async function DevicesPage() {
         title="Register Device"
         description="Add a smart door device with a stable device code. A secret token is generated automatically."
       >
-        <form action={saveDeviceAction} className="grid gap-4 lg:grid-cols-2">
-          <input
-            name="name"
-            placeholder="Device name"
-            required
-            className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
-          />
-          <input
-            name="device_code"
-            placeholder="Device code"
-            required
-            className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
-          />
-          <input
-            name="location"
-            placeholder="Location"
-            className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
-          />
-          <label className="flex items-center gap-3 text-sm text-slate-300">
-            <input type="checkbox" name="is_active" defaultChecked className="h-4 w-4" />
-            Active
-          </label>
-          <div className="lg:col-span-2">
-            <button
-              type="submit"
-              className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-accent-soft"
-            >
-              Save device
-            </button>
-          </div>
-        </form>
+        <AddDeviceForm />
       </SectionCard>
 
       <SectionCard

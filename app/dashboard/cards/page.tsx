@@ -1,6 +1,7 @@
 import SectionCard from "@/components/dashboard/SectionCard";
 import EmptyState from "@/components/dashboard/EmptyState";
 import RealtimeRefresh from "@/components/dashboard/RealtimeRefresh";
+import AddCardForm from "@/components/dashboard/AddCardForm";
 import { requireAdmin } from "@/lib/auth";
 import { getCards, getDevices } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
@@ -19,60 +20,7 @@ export default async function CardsPage() {
         title="Add Authorized RFID Card"
         description="Register a card UID, assign an owner, and optionally scope it to a device."
       >
-        <form action={saveCardAction} className="grid gap-4 lg:grid-cols-2">
-          <input
-            name="uid"
-            placeholder="Card UID"
-            className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
-            required
-          />
-          <input
-            name="label"
-            placeholder="Card label"
-            className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
-            required
-          />
-          <input
-            name="owner_name"
-            placeholder="Owner name"
-            className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
-          />
-          <input
-            name="email"
-            type="email"
-            placeholder="Owner email"
-            className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
-          />
-          <select
-            name="device_id"
-            className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
-            defaultValue=""
-          >
-            <option value="">All devices</option>
-            {devices.map((device) => (
-              <option key={device.id} value={device.id}>
-                {device.name}
-              </option>
-            ))}
-          </select>
-          <textarea
-            name="notes"
-            placeholder="Optional notes"
-            className="min-h-28 rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60 lg:col-span-2"
-          />
-          <label className="flex items-center gap-3 text-sm text-slate-300">
-            <input type="checkbox" name="is_enabled" defaultChecked className="h-4 w-4" />
-            Enabled
-          </label>
-          <div className="lg:col-span-2">
-            <button
-              type="submit"
-              className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-accent-soft"
-            >
-              Save card
-            </button>
-          </div>
-        </form>
+        <AddCardForm devices={devices} />
       </SectionCard>
 
       <SectionCard
