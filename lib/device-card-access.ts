@@ -42,20 +42,20 @@ export async function handleDeviceCardAccessRequest(request: Request) {
 
   const { data: device, error: deviceError } = await supabase
     .from("devices")
-    .select("id, name, device_code, secret_token, is_active")
+    .select("id, name, device_code, secret_token, device_token, is_active")
     .eq("device_code", deviceCode)
-    .eq("secret_token", deviceToken)
     .maybeSingle();
 
-  if (deviceError || !device || !device.is_active) {
+  const expectedToken = device?.secret_token ?? device?.device_token ?? null;
+
+  if (deviceError || !device || !device.is_active || !expectedToken || expectedToken !== deviceToken) {
     return NextResponse.json({ ok: false, error: "Unauthorized device." }, { status: 401 });
   }
 
   const { data: card, error: cardError } = await supabase
     .from("authorized_cards")
-    .select("id, uid, label, owner_name, device_id, is_enabled")
+    .select("id, uid, label, owner_name, device_id, is_enabled, is_active")
     .eq("uid", uid)
-    .eq("is_enabled", true)
     .or(`device_id.is.null,device_id.eq.${device.id}`)
     .maybeSingle();
 
@@ -68,14 +68,26 @@ export async function handleDeviceCardAccessRequest(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    authorized: Boolean(card),
+    authorized: Boolean(
+      card &&
+        (typeof card.is_enabled === "boolean"
+          ? card.is_enabled
+          : typeof card.is_active === "boolean"
+            ? card.is_active
+            : true)
+    ),
     uid,
     device: {
       id: device.id,
       name: device.name,
       device_code: device.device_code
     },
-    card: card
+    card: card &&
+      (typeof card.is_enabled === "boolean"
+        ? card.is_enabled
+        : typeof card.is_active === "boolean"
+          ? card.is_active
+          : true)
       ? {
           id: card.id,
           label: card.label,
