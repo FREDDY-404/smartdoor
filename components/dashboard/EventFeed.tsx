@@ -102,18 +102,18 @@ export default function EventFeed({
   }, [events, mode]);
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 lg:grid-cols-[1.4fr_repeat(4,minmax(0,1fr))]">
+    <div className="min-w-0 space-y-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_repeat(4,minmax(0,0.8fr))]">
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search UID, message, or device"
-          className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
+          className="min-w-0 rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-accent/60"
         />
         <select
           value={deviceId}
           onChange={(event) => setDeviceId(event.target.value)}
-          className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
+          className="min-w-0 rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
         >
           <option value="all">All devices</option>
           {devices.map((device) => (
@@ -125,7 +125,7 @@ export default function EventFeed({
         <select
           value={eventType}
           onChange={(event) => setEventType(event.target.value)}
-          className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
+          className="min-w-0 rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
         >
           <option value="all">All events</option>
           {availableTypes.map((type) => (
@@ -138,13 +138,13 @@ export default function EventFeed({
           type="date"
           value={from}
           onChange={(event) => setFrom(event.target.value)}
-          className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
+          className="min-w-0 rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
         />
         <input
           type="date"
           value={to}
           onChange={(event) => setTo(event.target.value)}
-          className="rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
+          className="min-w-0 rounded-2xl border border-border bg-panel2 px-4 py-3 text-sm text-white outline-none transition focus:border-accent/60"
         />
       </div>
 
@@ -154,15 +154,15 @@ export default function EventFeed({
           description="Adjust the event, device, search, or date filters to broaden the activity feed."
         />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border/70">
-          <table className="min-w-full text-left text-sm">
+        <div className="max-w-full overflow-x-auto rounded-[24px] border border-border/70 bg-panel/50">
+          <table className="min-w-[880px] w-full table-fixed text-left text-sm">
             <thead className="bg-panel2/90 text-xs uppercase tracking-[0.22em] text-slate-500">
               <tr>
-                <th className="px-4 py-3">Event</th>
-                <th className="px-4 py-3">Device</th>
-                <th className="px-4 py-3">UID</th>
+                <th className="w-[140px] px-4 py-3">Event</th>
+                <th className="w-[220px] px-4 py-3">Device</th>
+                <th className="w-[160px] px-4 py-3">UID</th>
                 <th className="px-4 py-3">Message</th>
-                <th className="px-4 py-3">Timestamp</th>
+                <th className="w-[190px] px-4 py-3">Timestamp</th>
               </tr>
             </thead>
             <tbody>
@@ -172,11 +172,13 @@ export default function EventFeed({
                     <EventTypePill eventType={event.event_type} />
                   </td>
                   <td className="px-4 py-3 text-slate-200">
-                    <div>{event.device?.name || event.device_id}</div>
-                    <div className="mt-1 text-xs text-slate-500">{event.device?.location || ""}</div>
+                    <div className="truncate">{event.device?.name || event.device_id}</div>
+                    <div className="mt-1 truncate text-xs text-slate-500">{event.device?.location || ""}</div>
                   </td>
-                  <td className="px-4 py-3 text-slate-300">{event.uid || "-"}</td>
-                  <td className="px-4 py-3 text-slate-300">{event.message || "-"}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-300">{event.uid || "-"}</td>
+                  <td className="px-4 py-3 text-slate-300">
+                    <div className="max-w-full truncate">{event.message || "-"}</div>
+                  </td>
                   <td className="px-4 py-3 text-slate-400">{formatDateTime(event.created_at)}</td>
                 </tr>
               ))}

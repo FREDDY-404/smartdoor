@@ -9,8 +9,8 @@ export default async function DashboardOverviewPage({
 }: {
   searchParams?: { device?: string };
 }) {
-  const { supabase } = await requireAdmin();
+  const { supabase, user } = await requireAdmin();
   const snapshot = await getOverviewSnapshot(supabase, searchParams?.device ?? null);
 
-  return <OverviewClient snapshot={snapshot} />;
+  return <OverviewClient snapshot={snapshot} userLabel={user.email ?? "Admin"} />;
 }

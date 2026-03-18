@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Navbar from "@/components/dashboard/Navbar";
+import ActivityChart from "@/components/dashboard/ActivityChart";
+import ActivityTable from "@/components/dashboard/ActivityTable";
+import type { ActivityRow } from "@/components/dashboard/ActivityTable";
+import AlertPanel from "@/components/dashboard/AlertPanel";
+import StatusCard from "@/components/dashboard/StatusCard";
 import { createClient } from "@/lib/supabase/client";
-import { formatDateTime, formatRelativeTime } from "@/lib/format";
+import { eventTypeLabels, eventToneMap, securityEventTypes } from "@/lib/constants";
 import type { DeviceStatus, DoorEvent, OverviewSnapshot } from "@/types";
-import SectionCard from "@/components/dashboard/SectionCard";
-import StatCard from "@/components/dashboard/StatCard";
-import EmptyState from "@/components/dashboard/EmptyState";
-import { DoorStatePill, EventTypePill } from "@/components/dashboard/StatePill";
 
 type StatusRow = OverviewSnapshot["statuses"][number];
 
@@ -23,9 +25,11 @@ function mergeStatus(rows: StatusRow[], nextStatus: DeviceStatus) {
 }
 
 export default function OverviewClient({
-  snapshot
+  snapshot,
+  userLabel
 }: {
   snapshot: OverviewSnapshot;
+  userLabel: string;
 }) {
   const [supabase] = useState(createClient);
   const [statuses, setStatuses] = useState(snapshot.statuses);
@@ -61,168 +65,155 @@ export default function OverviewClient({
     };
   }, [supabase]);
 
-  const selectedStatus = useMemo(() => {
-    if (!snapshot.selectedDeviceId) {
-      return null;
+  const doorState = useMemo(() => {
+    if (statuses.some((status) => status.door_state === "alarm")) {
+      return "alarm" as const;
+    }
+    if (statuses.some((status) => status.door_state === "unlocked")) {
+      return "unlocked" as const;
+    }
+    if (statuses.some((status) => status.door_state === "locked")) {
+      return "locked" as const;
+    }
+    return "unknown" as const;
+  }, [statuses]);
+
+  const chartData = useMemo(() => {
+    const buckets = [
+      { label: "RFID", success: 0, failed: 0 },
+      { label: "OTP", success: 0, failed: 0 },
+      { label: "Door", success: 0, failed: 0 },
+      { label: "Alert", success: 0, failed: 0 }
+    ];
+
+    for (const event of recentEvents) {
+      const failed = ["RFID_INVALID", "OTP_FAILED", "ACCESS_DENIED", "ALARM"].includes(event.event_type);
+      const key =
+        event.event_type.startsWith("RFID")
+          ? "RFID"
+          : event.event_type.startsWith("OTP")
+            ? "OTP"
+            : event.event_type.startsWith("DOOR") || event.event_type === "ACCESS_GRANTED"
+              ? "Door"
+              : "Alert";
+
+      const bucket = buckets.find((item) => item.label === key);
+      if (!bucket) continue;
+      if (failed) {
+        bucket.failed += 1;
+      } else {
+        bucket.success += 1;
+      }
     }
 
-    return statuses.find((status) => status.device_id === snapshot.selectedDeviceId) ?? null;
-  }, [snapshot.selectedDeviceId, statuses]);
+    return buckets;
+  }, [recentEvents]);
 
-  const latestEvent = recentEvents[0] ?? snapshot.latestEvent;
+  const activityRows = useMemo(() => {
+    return (recentEvents.length > 0 ? recentEvents : snapshot.recentEvents).slice(0, 8).map((event): ActivityRow => {
+      const method: ActivityRow["method"] = event.event_type.startsWith("OTP") ? "OTP" : "RFID";
+      const status: ActivityRow["status"] =
+        eventToneMap[event.event_type] === "success" ? "success" : "failed";
+
+      return {
+        id: event.id,
+        time: event.created_at,
+        user: event.uid || event.device?.name || "Unknown",
+        method,
+        status,
+        reason: event.message || eventTypeLabels[event.event_type] || event.event_type
+      };
+    });
+  }, [recentEvents, snapshot.recentEvents]);
+
+  const alertItems = useMemo(() => {
+    const source = recentEvents.length > 0 ? recentEvents : snapshot.recentEvents;
+    const alerts = source
+      .filter((event) => securityEventTypes.includes(event.event_type))
+      .slice(0, 4)
+      .map((event) => ({
+        id: event.id,
+        title: eventTypeLabels[event.event_type] || event.event_type,
+        detail: event.message || "Suspicious activity detected.",
+        tone: event.event_type === "ALARM" || event.event_type === "ACCESS_DENIED" ? "danger" as const : "warning" as const
+      }));
+
+    return alerts.length > 0
+      ? alerts
+      : [
+          {
+            id: "mock-1",
+            title: "Multiple failed attempts",
+            detail: "Repeated denied scans will appear here for rapid review.",
+            tone: "warning" as const
+          }
+        ];
+  }, [recentEvents, snapshot.recentEvents]);
+
+  const chartTotals = useMemo(() => {
+    return chartData.reduce(
+      (acc, item) => ({
+        success: acc.success + item.success,
+        failed: acc.failed + item.failed
+      }),
+      { success: 0, failed: 0 }
+    );
+  }, [chartData]);
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Access Granted"
+      <Navbar doorState={doorState} userLabel={userLabel} />
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatusCard
+          label="Total Access Today"
+          value={snapshot.metrics.totalAccessGranted + snapshot.metrics.totalAccessDenied}
+          tone="neutral"
+          icon={
+            <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+              <path d="M4 12h4l2-4 4 8 2-4h4" />
+            </svg>
+          }
+        />
+        <StatusCard
+          label="Successful Access"
           value={snapshot.metrics.totalAccessGranted}
-          hint="Successful smart door entries"
+          tone="success"
+          icon={
+            <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+          }
         />
-        <StatCard
-          label="Access Denied"
+        <StatusCard
+          label="Failed Attempts"
           value={snapshot.metrics.totalAccessDenied}
-          hint="Denied or blocked access attempts"
+          tone="danger"
+          icon={
+            <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+              <path d="M6 6l12 12M18 6l-12 12" />
+            </svg>
+          }
         />
-        <StatCard
-          label="Failed OTP"
-          value={snapshot.metrics.totalFailedOtpAttempts}
-          hint="Wrong OTP attempts recorded"
+        <StatusCard
+          label="Security Alerts"
+          value={snapshot.metrics.totalAlarms}
+          tone="warning"
+          icon={
+            <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current" strokeWidth="1.8">
+              <path d="M12 3l7 3v5c0 4.5-2.8 7.9-7 10-4.2-2.1-7-5.5-7-10V6l7-3z" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
+          }
         />
-        <StatCard label="Alarms" value={snapshot.metrics.totalAlarms} hint="Alarm event count" />
-      </div>
+      </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <SectionCard
-          title="Live Door Status"
-          description="Current state, last seen time, and latest event across registered devices."
-        >
-          {statuses.length === 0 ? (
-            <EmptyState
-              title="No devices registered"
-              description="Create a device in the Devices page to start receiving smart door events."
-            />
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {statuses.map((status) => (
-                <article
-                  key={status.device_id}
-                  className="rounded-2xl border border-border/70 bg-panel2/75 p-5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-white">{status.device.name}</p>
-                      <p className="mt-1 text-sm text-slate-400">
-                        {status.device.location || "No location"} · {status.device.device_code}
-                      </p>
-                    </div>
-                    <DoorStatePill state={status.door_state} />
-                  </div>
-                  <div className="mt-4 grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Online</p>
-                      <p className="mt-1">{status.is_online ? "Online" : "Offline"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Last Seen</p>
-                      <p className="mt-1">{formatRelativeTime(status.last_seen_at)}</p>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                        Latest Event
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {status.last_event_type ? (
-                          <EventTypePill eventType={status.last_event_type} />
-                        ) : (
-                          <span className="text-slate-500">No events yet</span>
-                        )}
-                        {status.last_message ? (
-                          <span className="text-sm text-slate-300">{status.last_message}</span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </SectionCard>
+      <section className="grid gap-6 2xl:grid-cols-[1.5fr_0.9fr]">
+        <ActivityChart barData={chartData} totals={chartTotals} />
+        <AlertPanel alerts={alertItems} />
+      </section>
 
-        <SectionCard
-          title="Current Focus"
-          description="Overview summary for the most recently selected or active device."
-        >
-          {selectedStatus ? (
-            <div className="space-y-4 rounded-2xl border border-border/70 bg-panel2/75 p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-medium text-white">{selectedStatus.device.name}</p>
-                  <p className="mt-1 text-sm text-slate-400">
-                    {selectedStatus.device.location || "No location"}
-                  </p>
-                </div>
-                <DoorStatePill state={selectedStatus.door_state} />
-              </div>
-              <div className="grid gap-4 text-sm text-slate-300 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Status</p>
-                  <p className="mt-1">{selectedStatus.is_online ? "Online" : "Offline"}</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Last Seen</p>
-                  <p className="mt-1">{formatDateTime(selectedStatus.last_seen_at)}</p>
-                </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                    Latest Message
-                  </p>
-                  <p className="mt-1">
-                    {selectedStatus.last_message || "No device message captured yet."}
-                  </p>
-                </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Latest Event</p>
-                  <div className="mt-2">
-                    {selectedStatus.last_event_type ? (
-                      <EventTypePill eventType={selectedStatus.last_event_type} />
-                    ) : (
-                      <span className="text-slate-500">No events yet</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <EmptyState
-              title="No status available"
-              description="Device status rows are created automatically when devices are added."
-            />
-          )}
-
-          <div className="mt-5 rounded-2xl border border-border/70 bg-panel2/75 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-medium text-white">Latest Event Across Devices</p>
-                <p className="mt-1 text-sm text-slate-400">
-                  The newest event inserted into `door_events`.
-                </p>
-              </div>
-              {latestEvent ? <EventTypePill eventType={latestEvent.event_type} /> : null}
-            </div>
-            {latestEvent ? (
-              <div className="mt-4 space-y-2 text-sm text-slate-300">
-                <p>{latestEvent.message || "No message provided."}</p>
-                <p className="text-slate-400">
-                  UID: {latestEvent.uid || "N/A"} · {formatDateTime(latestEvent.created_at)}
-                </p>
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-500">No event received yet.</p>
-            )}
-          </div>
-        </SectionCard>
-      </div>
+      <ActivityTable rows={activityRows} />
     </div>
   );
 }
