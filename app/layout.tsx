@@ -16,7 +16,12 @@ const space = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: "Smart Door Dashboard",
-  description: "Admin dashboard for monitoring and managing Smart Door devices with Supabase."
+  description: "Admin dashboard for monitoring and managing Smart Door devices with Supabase.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg"
+  }
 };
 
 export default function RootLayout({

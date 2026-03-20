@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="120" fill="#0F1724"/>
+  <ellipse cx="232" cy="316" rx="162" ry="60" fill="url(#ring)" transform="rotate(-8 232 316)"/>
+  <path d="M164 160L272 132V376L164 352V160Z" fill="url(#doorFace)"/>
+  <path d="M272 132L354 146V404L272 376V132Z" fill="#0B3765"/>
+  <path d="M188 176L246 162" stroke="#D9F4FF" stroke-width="8" stroke-linecap="round"/>
+  <rect x="232" y="252" width="20" height="52" rx="10" fill="#F4F7FB"/>
+  <circle cx="292" cy="156" r="30" fill="#F4F7FB"/>
+  <circle cx="292" cy="156" r="17" fill="#F97316"/>
+  <path d="M260 120C278 98 306 86 334 86C362 86 390 98 408 120" stroke="#F97316" stroke-width="18" stroke-linecap="round"/>
+  <path d="M276 94C291 78 312 70 334 70C356 70 377 78 392 94" stroke="#FB923C" stroke-width="18" stroke-linecap="round"/>
+  <path d="M247 325C287 346 336 343 382 314" stroke="#0A2C56" stroke-width="22" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="doorFace" x1="164" y1="132" x2="272" y2="376" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2ED3E5"/>
+      <stop offset="1" stop-color="#105AA5"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="72" y1="316" x2="394" y2="316" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#15C6D1"/>
+      <stop offset="1" stop-color="#0A4472"/>
+    </linearGradient>
+  </defs>
+</svg>
