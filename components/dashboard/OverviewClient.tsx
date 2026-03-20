@@ -161,7 +161,7 @@ export default function OverviewClient({
   }, [chartData]);
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <Navbar doorState={doorState} userLabel={userLabel} />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -208,7 +208,7 @@ export default function OverviewClient({
         />
       </section>
 
-      <section className="grid gap-6 2xl:grid-cols-[1.5fr_0.9fr]">
+      <section className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)]">
         <ActivityChart barData={chartData} totals={chartTotals} />
         <AlertPanel alerts={alertItems} />
       </section>

@@ -25,13 +25,13 @@ export default function ActivityChart({ barData, totals }: ActivityChartProps) {
   ];
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.5fr_0.9fr]">
-      <div className="rounded-[24px] border border-white/10 bg-zinc-800/80 p-4">
+    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.9fr)]">
+      <div className="min-w-0 rounded-[24px] border border-white/10 bg-zinc-800/80 p-4">
         <div className="mb-4">
           <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Activity Chart</p>
           <h3 className="mt-2 text-lg font-semibold text-zinc-50">Success vs failed attempts</h3>
         </div>
-        <div className="h-72">
+        <div className="h-72 min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData}>
               <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
@@ -51,12 +51,12 @@ export default function ActivityChart({ barData, totals }: ActivityChartProps) {
           </ResponsiveContainer>
         </div>
       </div>
-      <div className="rounded-[24px] border border-white/10 bg-zinc-800/80 p-4">
+      <div className="min-w-0 rounded-[24px] border border-white/10 bg-zinc-800/80 p-4">
         <div className="mb-4">
           <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Distribution</p>
           <h3 className="mt-2 text-lg font-semibold text-zinc-50">Current ratio</h3>
         </div>
-        <div className="h-72">
+        <div className="h-72 min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

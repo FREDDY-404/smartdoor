@@ -2,6 +2,14 @@ import { ONLINE_WINDOW_MINUTES, eventTypeLabels } from "@/lib/constants";
 import { type DoorState, type EventType } from "@/types";
 
 const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const yangonFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Yangon",
+  month: "short",
+  day: "2-digit",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true
+});
 
 export function formatDateTime(value: string | null) {
   if (!value) {
@@ -13,14 +21,14 @@ export function formatDateTime(value: string | null) {
     return value;
   }
 
-  const month = monthLabels[date.getUTCMonth()] ?? "Jan";
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const rawHour = date.getUTCHours();
-  const minute = String(date.getUTCMinutes()).padStart(2, "0");
-  const hour = rawHour % 12 || 12;
-  const period = rawHour >= 12 ? "PM" : "AM";
+  const parts = yangonFormatter.formatToParts(date);
+  const month = parts.find((part) => part.type === "month")?.value ?? monthLabels[date.getUTCMonth()] ?? "Jan";
+  const day = parts.find((part) => part.type === "day")?.value ?? String(date.getUTCDate()).padStart(2, "0");
+  const hour = parts.find((part) => part.type === "hour")?.value ?? "12";
+  const minute = parts.find((part) => part.type === "minute")?.value ?? "00";
+  const period = parts.find((part) => part.type === "dayPeriod")?.value ?? "AM";
 
-  return `${month} ${day}, ${hour}:${minute} ${period} UTC`;
+  return `${month} ${day}, ${hour}:${minute} ${period} Yangon`;
 }
 
 export function formatRelativeTime(value: string | null) {
